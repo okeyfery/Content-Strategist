@@ -1,0 +1,370 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Hardened Global Primitives ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isOptionalId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]*$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerifiedUser() && request.auth.uid == userId;
+    }
+
+    function isValidPlatform(p) {
+      return p is string && p in ['youtube', 'instagram', 'tiktok', 'linkedin', 'x'];
+    }
+
+    function isValidPeriod(p) {
+      return p is string && p in ['7d', '14d', '30d', '90d'];
+    }
+
+    function isValidStringList(arr, maxLen) {
+      return arr is list && arr.size() <= maxLen && (arr.size() == 0 || (arr[0] is string && arr[0].size() <= 500));
+    }
+
+    function isValidSourceList(arr, maxLen) {
+      return arr is list && arr.size() <= maxLen && (arr.size() == 0 || (arr[0] is map && arr[0].keys().hasOnly(['title', 'uri']) && arr[0].title is string && arr[0].title.size() <= 240 && arr[0].uri is string && arr[0].uri.size() <= 600));
+    }
+
+    function brandExists(userId, brandId) {
+      return isValidId(brandId) && exists(/databases/$(database)/documents/users/$(userId)/brands/$(brandId));
+    }
+
+    // --- Entity Validation Blueprints (Synchronized with firebase-blueprint.json) ---
+
+    function isValidUserWorkspace(data, userId) {
+      return data.keys().hasAll(['ownerId', 'activeBrandId', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'activeBrandId', 'createdAt', 'updatedAt'])
+        && isValidId(data.ownerId)
+        && data.ownerId == request.auth.uid
+        && data.ownerId == userId
+        && isOptionalId(data.activeBrandId)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidBrand(data, userId) {
+      return data.keys().hasAll(['ownerId', 'name', 'niche', 'audience', 'tone', 'defaultLanguage', 'pillars', 'platforms', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'name', 'niche', 'audience', 'tone', 'usp', 'forbiddenTerms', 'defaultLanguage', 'pillars', 'platforms', 'createdAt', 'updatedAt'])
+        && isValidId(data.ownerId)
+        && data.ownerId == request.auth.uid
+        && data.ownerId == userId
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
+        && data.niche is string && data.niche.size() >= 1 && data.niche.size() <= 160
+        && data.audience is string && data.audience.size() <= 400
+        && data.tone is string && data.tone.size() <= 240
+        && (!('usp' in data) || (data.usp is string && data.usp.size() <= 500))
+        && (!('forbiddenTerms' in data) || (data.forbiddenTerms is string && data.forbiddenTerms.size() <= 300))
+        && data.defaultLanguage is string && data.defaultLanguage in ['fa', 'en', 'both']
+        && isValidStringList(data.pillars, 10)
+        && isValidStringList(data.platforms, 5)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidWatchlistAccount(data, userId) {
+      return data.keys().hasAll(['ownerId', 'brandId', 'platform', 'name', 'handle', 'url', 'category', 'baselineViews', 'followersCount', 'cadence', 'contentStyle', 'notes', 'lastAuditedAt', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'brandId', 'platform', 'name', 'handle', 'url', 'category', 'baselineViews', 'followersCount', 'cadence', 'contentStyle', 'notes', 'lastAuditedAt', 'createdAt', 'updatedAt'])
+        && isValidId(data.ownerId)
+        && data.ownerId == request.auth.uid
+        && data.ownerId == userId
+        && isValidId(data.brandId)
+        && isValidPlatform(data.platform)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 140
+        && data.handle is string && data.handle.size() >= 1 && data.handle.size() <= 140
+        && data.url is string && data.url.size() <= 500
+        && data.category is string && data.category.size() <= 120
+        && data.baselineViews is number && data.baselineViews >= 0
+        && data.followersCount is number && data.followersCount >= 0
+        && isValidPeriod(data.cadence)
+        && data.contentStyle is string && data.contentStyle.size() <= 500
+        && data.notes is string && data.notes.size() <= 1000
+        && data.lastAuditedAt is string && data.lastAuditedAt.size() <= 64
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidOutlierItem(data, userId) {
+      return data.keys().hasAll(['ownerId', 'brandId', 'accountId', 'accountName', 'platform', 'format', 'title', 'url', 'publishedLabel', 'views', 'baselineViews', 'outlierMultiplier', 'likes', 'comments', 'engagementRate', 'hookPattern', 'whyItWorked', 'structureBreakdown', 'brandAdaptationIdea', 'sourceType', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'brandId', 'accountId', 'accountName', 'platform', 'format', 'title', 'url', 'publishedLabel', 'views', 'baselineViews', 'outlierMultiplier', 'likes', 'comments', 'engagementRate', 'hookPattern', 'whyItWorked', 'structureBreakdown', 'brandAdaptationIdea', 'sourceType', 'createdAt', 'updatedAt'])
+        && isValidId(data.ownerId)
+        && data.ownerId == request.auth.uid
+        && data.ownerId == userId
+        && isValidId(data.brandId)
+        && isOptionalId(data.accountId)
+        && data.accountName is string && data.accountName.size() >= 1 && data.accountName.size() <= 140
+        && isValidPlatform(data.platform)
+        && data.format is string && data.format.size() <= 80
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 300
+        && data.url is string && data.url.size() <= 500
+        && data.publishedLabel is string && data.publishedLabel.size() <= 80
+        && data.views is number && data.views >= 0
+        && data.baselineViews is number && data.baselineViews >= 0
+        && data.outlierMultiplier is number && data.outlierMultiplier >= 0
+        && data.likes is number && data.likes >= 0
+        && data.comments is number && data.comments >= 0
+        && data.engagementRate is number && data.engagementRate >= 0
+        && data.hookPattern is string && data.hookPattern.size() <= 500
+        && data.whyItWorked is string && data.whyItWorked.size() <= 1500
+        && data.structureBreakdown is string && data.structureBreakdown.size() <= 1500
+        && data.brandAdaptationIdea is string && data.brandAdaptationIdea.size() <= 1000
+        && data.sourceType is string && data.sourceType in ['ai_discovery', 'manual_entry', 'csv_import', 'url_analysis']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAuditReport(data, userId) {
+      return data.keys().hasAll(['ownerId', 'brandId', 'period', 'title', 'executiveSummary', 'accountsReviewed', 'risingTopics', 'winningFormats', 'contentGaps', 'actionPlan', 'sources', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'brandId', 'period', 'title', 'executiveSummary', 'accountsReviewed', 'risingTopics', 'winningFormats', 'contentGaps', 'actionPlan', 'sources', 'createdAt', 'updatedAt'])
+        && isValidId(data.ownerId)
+        && data.ownerId == request.auth.uid
+        && data.ownerId == userId
+        && isValidId(data.brandId)
+        && isValidPeriod(data.period)
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.executiveSummary is string && data.executiveSummary.size() <= 2500
+        && isValidStringList(data.accountsReviewed, 25)
+        && isValidStringList(data.risingTopics, 12)
+        && isValidStringList(data.winningFormats, 10)
+        && isValidStringList(data.contentGaps, 10)
+        && isValidStringList(data.actionPlan, 12)
+        && isValidSourceList(data.sources, 15)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidContentDraft(data, userId) {
+      return data.keys().hasAll(['ownerId', 'brandId', 'sourceOutlierId', 'platform', 'format', 'language', 'topic', 'title', 'hooks', 'bodyScript', 'caption', 'cta', 'visualConcept', 'brandFitNotes', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'brandId', 'sourceOutlierId', 'platform', 'format', 'language', 'topic', 'title', 'hooks', 'bodyScript', 'caption', 'cta', 'visualConcept', 'brandFitNotes', 'status', 'createdAt', 'updatedAt'])
+        && isValidId(data.ownerId)
+        && data.ownerId == request.auth.uid
+        && data.ownerId == userId
+        && isValidId(data.brandId)
+        && isOptionalId(data.sourceOutlierId)
+        && isValidPlatform(data.platform)
+        && data.format is string && data.format.size() <= 80
+        && data.language is string && data.language in ['fa', 'en']
+        && data.topic is string && data.topic.size() >= 1 && data.topic.size() <= 240
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 240
+        && isValidStringList(data.hooks, 6)
+        && data.bodyScript is string && data.bodyScript.size() <= 8000
+        && data.caption is string && data.caption.size() <= 2500
+        && data.cta is string && data.cta.size() <= 500
+        && data.visualConcept is string && data.visualConcept.size() <= 1200
+        && data.brandFitNotes is string && data.brandFitNotes.size() <= 1200
+        && data.status is string && data.status in ['idea', 'draft', 'ready', 'archived']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAICacheEntry(data, userId, cacheKey) {
+      return data.keys().hasAll(['ownerId', 'cacheKey', 'queryType', 'payloadHash', 'responseJson', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'cacheKey', 'queryType', 'payloadHash', 'responseJson', 'createdAt', 'updatedAt'])
+        && isValidId(data.ownerId)
+        && data.ownerId == request.auth.uid
+        && data.ownerId == userId
+        && isValidId(data.cacheKey)
+        && data.cacheKey == cacheKey
+        && data.queryType is string && data.queryType in ['discover', 'hunt', 'audit']
+        && data.payloadHash is string && data.payloadHash.size() >= 1 && data.payloadHash.size() <= 128
+        && data.responseJson is string && data.responseJson.size() >= 2 && data.responseJson.size() <= 50000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // --- Collection Match Blocks ---
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId) && (resource == null || resource.data.ownerId == request.auth.uid);
+      allow list: if false;
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserWorkspace(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserWorkspace(incoming(), userId)
+        && existing().ownerId == request.auth.uid
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['activeBrandId', 'updatedAt']);
+      allow delete: if false;
+
+      match /aiCache/{cacheKey} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(cacheKey) && (resource == null || resource.data.ownerId == request.auth.uid);
+        allow list: if isOwner(userId) && isValidId(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isOwner(userId)
+          && isValidId(userId)
+          && isValidId(cacheKey)
+          && isValidAICacheEntry(incoming(), userId, cacheKey)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isOwner(userId)
+          && isValidId(userId)
+          && isValidId(cacheKey)
+          && isValidAICacheEntry(incoming(), userId, cacheKey)
+          && existing().ownerId == request.auth.uid
+          && incoming().ownerId == existing().ownerId
+          && incoming().cacheKey == existing().cacheKey
+          && incoming().queryType == existing().queryType
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['payloadHash', 'responseJson', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(cacheKey) && existing().ownerId == request.auth.uid;
+      }
+
+      match /brands/{brandId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(brandId) && (resource == null || resource.data.ownerId == request.auth.uid);
+        allow list: if isOwner(userId) && isValidId(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isOwner(userId)
+          && isValidId(userId)
+          && isValidId(brandId)
+          && isValidBrand(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isOwner(userId)
+          && isValidId(userId)
+          && isValidId(brandId)
+          && isValidBrand(incoming(), userId)
+          && existing().ownerId == request.auth.uid
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            // Action: Edit Brand Profile
+            incoming().diff(existing()).affectedKeys().hasOnly(['name', 'niche', 'audience', 'tone', 'usp', 'forbiddenTerms', 'defaultLanguage', 'pillars', 'platforms', 'updatedAt'])
+          );
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(brandId) && existing().ownerId == request.auth.uid;
+      }
+
+      match /watchlistAccounts/{accountId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(accountId) && (resource == null || resource.data.ownerId == request.auth.uid);
+        allow list: if isOwner(userId) && isValidId(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isOwner(userId)
+          && isValidId(userId)
+          && isValidId(accountId)
+          && isValidWatchlistAccount(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && brandExists(userId, incoming().brandId);
+        allow update: if isOwner(userId)
+          && isValidId(userId)
+          && isValidId(accountId)
+          && isValidWatchlistAccount(incoming(), userId)
+          && existing().ownerId == request.auth.uid
+          && incoming().ownerId == existing().ownerId
+          && incoming().brandId == existing().brandId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            // Action: Update Cadence & Audit Stamp
+            incoming().diff(existing()).affectedKeys().hasOnly(['cadence', 'lastAuditedAt', 'updatedAt']) ||
+            // Action: Edit Account Metadata & Baseline Metrics
+            incoming().diff(existing()).affectedKeys().hasOnly(['name', 'handle', 'url', 'category', 'baselineViews', 'followersCount', 'cadence', 'contentStyle', 'notes', 'lastAuditedAt', 'updatedAt'])
+          );
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(accountId) && existing().ownerId == request.auth.uid;
+      }
+
+      match /outliers/{outlierId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(outlierId) && (resource == null || resource.data.ownerId == request.auth.uid);
+        allow list: if isOwner(userId) && isValidId(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isOwner(userId)
+          && isValidId(userId)
+          && isValidId(outlierId)
+          && isValidOutlierItem(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && brandExists(userId, incoming().brandId);
+        allow update: if isOwner(userId)
+          && isValidId(userId)
+          && isValidId(outlierId)
+          && isValidOutlierItem(incoming(), userId)
+          && existing().ownerId == request.auth.uid
+          && incoming().ownerId == existing().ownerId
+          && incoming().brandId == existing().brandId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            // Action: Enrich Deconstruction Insights
+            incoming().diff(existing()).affectedKeys().hasOnly(['hookPattern', 'whyItWorked', 'structureBreakdown', 'brandAdaptationIdea', 'updatedAt']) ||
+            // Action: Update Metrics
+            incoming().diff(existing()).affectedKeys().hasOnly(['views', 'baselineViews', 'outlierMultiplier', 'likes', 'comments', 'engagementRate', 'updatedAt'])
+          );
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(outlierId) && existing().ownerId == request.auth.uid;
+      }
+
+      match /auditReports/{reportId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(reportId) && (resource == null || resource.data.ownerId == request.auth.uid);
+        allow list: if isOwner(userId) && isValidId(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isOwner(userId)
+          && isValidId(userId)
+          && isValidId(reportId)
+          && isValidAuditReport(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && brandExists(userId, incoming().brandId);
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(reportId) && existing().ownerId == request.auth.uid;
+      }
+
+      match /contentDrafts/{draftId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(draftId) && (resource == null || resource.data.ownerId == request.auth.uid);
+        allow list: if isOwner(userId) && isValidId(userId) && resource.data.ownerId == request.auth.uid;
+        allow create: if isOwner(userId)
+          && isValidId(userId)
+          && isValidId(draftId)
+          && isValidContentDraft(incoming(), userId)
+          && incoming().status != 'archived'
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && brandExists(userId, incoming().brandId);
+        allow update: if isOwner(userId)
+          && isValidId(userId)
+          && isValidId(draftId)
+          && isValidContentDraft(incoming(), userId)
+          && existing().ownerId == request.auth.uid
+          && existing().status != 'archived'
+          && incoming().ownerId == existing().ownerId
+          && incoming().brandId == existing().brandId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            // Action: Transition Draft Status
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) ||
+            // Action: Edit Draft Copy & Assets
+            incoming().diff(existing()).affectedKeys().hasOnly(['title', 'hooks', 'bodyScript', 'caption', 'cta', 'visualConcept', 'brandFitNotes', 'status', 'updatedAt'])
+          );
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(draftId) && existing().ownerId == request.auth.uid;
+      }
+    }
+  }
+}

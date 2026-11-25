@@ -1,0 +1,6 @@
+{
+  "name": "رادار محتوا — استودیو تحلیل چندپلتفرمی و شکار Outlier",
+  "description": "پلتفرم هوشمند تحلیل شبکه‌های اجتماعی، مدیریت واتچ‌لیست دوره‌ای، کشف ویدیوهای Outlier و تولید محتوای اختصاصی برند به زبان فارسی و انگلیسی.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

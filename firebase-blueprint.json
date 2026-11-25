@@ -1,0 +1,466 @@
+{
+  "entities": {
+    "UserWorkspace": {
+      "title": "UserWorkspace",
+      "description": "Per-user workspace preference storing active brand selection.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "activeBrandId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]*$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "activeBrandId", "createdAt", "updatedAt"]
+    },
+    "Brand": {
+      "title": "Brand",
+      "description": "Brand profile defining niche, audience, tone of voice, content pillars, and language preferences.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "niche": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "audience": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "tone": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "usp": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "forbiddenTerms": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "defaultLanguage": {
+          "type": "string",
+          "enum": ["fa", "en", "both"]
+        },
+        "pillars": {
+          "type": "array",
+          "description": "Up to 10 core content pillars for the brand."
+        },
+        "platforms": {
+          "type": "array",
+          "description": "Up to 5 target platforms."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "name", "niche", "audience", "tone", "defaultLanguage", "pillars", "platforms", "createdAt", "updatedAt"]
+    },
+    "WatchlistAccount": {
+      "title": "WatchlistAccount",
+      "description": "A tracked competitor or inspiration channel/account belonging to a brand watchlist.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "brandId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "platform": {
+          "type": "string",
+          "enum": ["youtube", "instagram", "tiktok", "linkedin", "x"]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "handle": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "baselineViews": {
+          "type": "number"
+        },
+        "followersCount": {
+          "type": "number"
+        },
+        "cadence": {
+          "type": "string",
+          "enum": ["7d", "14d", "30d", "90d"]
+        },
+        "contentStyle": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "lastAuditedAt": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "brandId", "platform", "name", "handle", "url", "category", "baselineViews", "followersCount", "cadence", "contentStyle", "notes", "lastAuditedAt", "createdAt", "updatedAt"]
+    },
+    "OutlierItem": {
+      "title": "OutlierItem",
+      "description": "A high-performing video or post outperforming channel baseline metrics with deconstruction insights.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "brandId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "accountId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]*$"
+        },
+        "accountName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "platform": {
+          "type": "string",
+          "enum": ["youtube", "instagram", "tiktok", "linkedin", "x"]
+        },
+        "format": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "publishedLabel": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "views": {
+          "type": "number"
+        },
+        "baselineViews": {
+          "type": "number"
+        },
+        "outlierMultiplier": {
+          "type": "number"
+        },
+        "likes": {
+          "type": "number"
+        },
+        "comments": {
+          "type": "number"
+        },
+        "engagementRate": {
+          "type": "number"
+        },
+        "hookPattern": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "whyItWorked": {
+          "type": "string",
+          "maxLength": 1500
+        },
+        "structureBreakdown": {
+          "type": "string",
+          "maxLength": 1500
+        },
+        "brandAdaptationIdea": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "sourceType": {
+          "type": "string",
+          "enum": ["ai_discovery", "manual_entry", "csv_import", "url_analysis"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "brandId", "accountId", "accountName", "platform", "format", "title", "url", "publishedLabel", "views", "baselineViews", "outlierMultiplier", "likes", "comments", "engagementRate", "hookPattern", "whyItWorked", "structureBreakdown", "brandAdaptationIdea", "sourceType", "createdAt", "updatedAt"]
+    },
+    "AuditReport": {
+      "title": "AuditReport",
+      "description": "Periodic watchlist audit report summarizing trends, format winners, content gaps, and action items.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "brandId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "period": {
+          "type": "string",
+          "enum": ["7d", "14d", "30d", "90d"]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "executiveSummary": {
+          "type": "string",
+          "maxLength": 2500
+        },
+        "accountsReviewed": {
+          "type": "array",
+          "description": "Up to 25 account names reviewed in this audit."
+        },
+        "risingTopics": {
+          "type": "array",
+          "description": "Up to 12 rising topics detected in the period."
+        },
+        "winningFormats": {
+          "type": "array",
+          "description": "Up to 10 winning formats in the period."
+        },
+        "contentGaps": {
+          "type": "array",
+          "description": "Up to 10 content gaps and brand opportunities."
+        },
+        "actionPlan": {
+          "type": "array",
+          "description": "Up to 12 concrete next steps."
+        },
+        "sources": {
+          "type": "array",
+          "description": "Up to 15 grounding web citations."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "brandId", "period", "title", "executiveSummary", "accountsReviewed", "risingTopics", "winningFormats", "contentGaps", "actionPlan", "sources", "createdAt", "updatedAt"]
+    },
+    "ContentDraft": {
+      "title": "ContentDraft",
+      "description": "Brand-tailored content piece generated from a topic or outlier blueprint in Persian or English.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "brandId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "sourceOutlierId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]*$"
+        },
+        "platform": {
+          "type": "string",
+          "enum": ["youtube", "instagram", "tiktok", "linkedin", "x"]
+        },
+        "format": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "language": {
+          "type": "string",
+          "enum": ["fa", "en"]
+        },
+        "topic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "hooks": {
+          "type": "array",
+          "description": "Up to 6 hook variations."
+        },
+        "bodyScript": {
+          "type": "string",
+          "maxLength": 8000
+        },
+        "caption": {
+          "type": "string",
+          "maxLength": 2500
+        },
+        "cta": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "visualConcept": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "brandFitNotes": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "status": {
+          "type": "string",
+          "enum": ["idea", "draft", "ready", "archived"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "brandId", "sourceOutlierId", "platform", "format", "language", "topic", "title", "hooks", "bodyScript", "caption", "cta", "visualConcept", "brandFitNotes", "status", "createdAt", "updatedAt"]
+    },
+    "AICacheEntry": {
+      "title": "AICacheEntry",
+      "description": "Authenticated per-user cache entry for verified AI discovery, hunt, and audit queries to conserve AI quota.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "cacheKey": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "queryType": {
+          "type": "string",
+          "enum": ["discover", "hunt", "audit"]
+        },
+        "payloadHash": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "responseJson": {
+          "type": "string",
+          "maxLength": 50000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "cacheKey", "queryType", "payloadHash", "responseJson", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserWorkspace" },
+      "description": "User workspace metadata storing active brand ID."
+    },
+    "/users/{userId}/brands/{brandId}": {
+      "schema": { "$ref": "#/entities/Brand" },
+      "description": "Brand profiles owned by the authenticated user."
+    },
+    "/users/{userId}/watchlistAccounts/{accountId}": {
+      "schema": { "$ref": "#/entities/WatchlistAccount" },
+      "description": "Tracked competitor and inspiration accounts linked to a brand."
+    },
+    "/users/{userId}/outliers/{outlierId}": {
+      "schema": { "$ref": "#/entities/OutlierItem" },
+      "description": "Detected or imported outlier videos and posts linked to a brand."
+    },
+    "/users/{userId}/auditReports/{reportId}": {
+      "schema": { "$ref": "#/entities/AuditReport" },
+      "description": "Periodic watchlist audit reports linked to a brand."
+    },
+    "/users/{userId}/contentDrafts/{draftId}": {
+      "schema": { "$ref": "#/entities/ContentDraft" },
+      "description": "Brand-tailored content drafts generated in Persian or English."
+    },
+    "/users/{userId}/aiCache/{cacheKey}": {
+      "schema": { "$ref": "#/entities/AICacheEntry" },
+      "description": "Cached AI responses for discovery, hunt, and audit queries."
+    }
+  }
+}

@@ -23,8 +23,24 @@ const __dirname = path.dirname(__filename);
 const PRIMARY_MODEL = 'gemini-2.5-flash';
 const FALLBACK_MODEL = 'gemini-2.5-flash-lite';
 
+function getNormalizedGeminiKey(): string {
+  const candidates = [
+    process.env.GEMINI_API_KEY,
+    process.env.GOOGLE_API_KEY,
+    process.env.API_KEY,
+    process.env.VITE_GEMINI_API_KEY,
+  ];
+  for (const raw of candidates) {
+    const cleaned = (raw ?? '').trim().replace(/^['"]+|['"]+$/g, '').trim();
+    if (cleaned && !/^MY_GEMINI_API_KEY$/i.test(cleaned) && !/^YOUR_GEMINI_API_KEY$/i.test(cleaned)) {
+      return cleaned;
+    }
+  }
+  return '';
+}
+
 function getAiClient(): GoogleGenAI {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = getNormalizedGeminiKey();
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not configured on the server.');
   }
@@ -595,10 +611,13 @@ function formatApiError(error: unknown): { status: number; message: string; code
     };
   }
   if (raw.includes('GEMINI_API_KEY is not configured')) {
+    const isVercel = Boolean(process.env.VERCEL);
     return {
       status: 500,
       code: 'MISSING_KEY',
-      message: 'کلید GEMINI_API_KEY در بخش Settings > Secrets تنظیم نشده است.',
+      message: isVercel
+        ? 'کلید GEMINI_API_KEY در Vercel تنظیم نشده است. وارد Vercel → Project Settings → Environment Variables شوید، متغیر GEMINI_API_KEY را برای Production اضافه کنید و سپس یک‌بار Redeploy بزنید.'
+        : 'کلید GEMINI_API_KEY در بخش Settings > Secrets تنظیم نشده است.',
     };
   }
   return {
@@ -734,7 +753,7 @@ export function createApiApp() {
       primaryModel: PRIMARY_MODEL,
       fallbackModel: FALLBACK_MODEL,
       memoryCacheEntries: memoryCache.size,
-      apiKeyConfigured: Boolean(process.env.GEMINI_API_KEY?.trim()),
+      apiKeyConfigured: Boolean(getNormalizedGeminiKey()),
       tavilyKeyConfigured: isTavilyConfigured(),
     });
   });

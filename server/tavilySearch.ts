@@ -36,13 +36,19 @@ export class TavilyError extends Error {
 }
 
 function getNormalizedTavilyKey(): string {
-  const raw = (process.env.TAVILY_API_KEY ?? '').trim();
-  const unquoted = raw.replace(/^['"]+|['"]+$/g, '').trim();
-  const withoutBearer = unquoted.replace(/^Bearer\s+/i, '').trim();
-  if (!withoutBearer || /^MY_TAVILY_API_KEY$/i.test(withoutBearer) || /^YOUR_TAVILY_API_KEY$/i.test(withoutBearer)) {
-    return '';
+  const candidates = [process.env.TAVILY_API_KEY, process.env.VITE_TAVILY_API_KEY];
+  for (const raw of candidates) {
+    const unquoted = (raw ?? '').trim().replace(/^['"]+|['"]+$/g, '').trim();
+    const withoutBearer = unquoted.replace(/^Bearer\s+/i, '').trim();
+    if (
+      withoutBearer &&
+      !/^MY_TAVILY_API_KEY$/i.test(withoutBearer) &&
+      !/^YOUR_TAVILY_API_KEY$/i.test(withoutBearer)
+    ) {
+      return withoutBearer;
+    }
   }
-  return withoutBearer;
+  return '';
 }
 
 export function isTavilyConfigured(): boolean {
@@ -106,10 +112,13 @@ export async function searchTavily(
 ): Promise<TavilyCleanResult[]> {
   const apiKey = getNormalizedTavilyKey();
   if (!apiKey) {
+    const isVercel = Boolean(process.env.VERCEL);
     throw new TavilyError(
       'TAVILY_KEY_MISSING',
       400,
-      'کلید TAVILY_API_KEY تنظیم نشده است. برای جستجوی زنده در اینستاگرام، تیک‌تاک، لینکدین و ایکس، لطفاً TAVILY_API_KEY را در بخش Settings > Secrets اضافه کنید.'
+      isVercel
+        ? 'کلید TAVILY_API_KEY در Vercel تنظیم نشده است. وارد Vercel → Project Settings → Environment Variables شوید، متغیر TAVILY_API_KEY را برای Production اضافه کنید و سپس یک‌بار Redeploy بزنید.'
+        : 'کلید TAVILY_API_KEY تنظیم نشده است. برای جستجوی زنده در اینستاگرام، تیک‌تاک، لینکدین و ایکس، لطفاً TAVILY_API_KEY را در بخش Settings > Secrets اضافه کنید.'
     );
   }
 

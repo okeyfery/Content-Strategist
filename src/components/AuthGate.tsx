@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { ArrowLeft, Radar, ShieldCheck, Layers, TrendingUp, Sparkles } from 'lucide-react';
 import { signInWithGoogle } from '../firebase';
+import studioBackdrop from '../assets/images/auth_studio_backdrop_1795548676361.jpg';
 
-const STUDIO_BACKDROP = '/src/assets/images/auth_studio_backdrop_1795548676361.jpg';
+const STUDIO_BACKDROP = studioBackdrop;
 
 export function AuthGate() {
   const [loading, setLoading] = useState(false);
@@ -15,11 +16,27 @@ export function AuthGate() {
     try {
       await signInWithGoogle();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'ورود با گوگل ناموفق بود.';
-      if (msg.includes('popup-closed-by-user')) {
+      const code = (err as { code?: string })?.code || '';
+      const msg = err instanceof Error ? err.message : '';
+      const combined = `${code} ${msg}`;
+
+      if (combined.includes('unauthorized-domain')) {
+        const host = typeof window !== 'undefined' ? window.location.hostname : '';
+        setError(
+          `دامنه «${host}» در Firebase مجاز نشده است (auth/unauthorized-domain). در Firebase Console وارد Authentication → Settings → Authorized domains شوید و این دامنه را اضافه کنید.`
+        );
+      } else if (combined.includes('popup-closed-by-user')) {
         setError('پنجره ورود بسته شد. برای ادامه مجدداً روی ورود با گوگل کلیک کنید.');
+      } else if (combined.includes('popup-blocked')) {
+        setError('مرورگر پنجره ورود (Popup) را مسدود کرده است. لطفاً اجازه باز شدن پاپ‌آپ را فعال کرده و دوباره تلاش کنید.');
+      } else if (combined.includes('cancelled-popup-request')) {
+        setError('درخواست ورود قبلی هنوز باز است. لطفاً یک‌بار روی دکمه ورود کلیک کنید.');
+      } else if (combined.includes('network-request-failed')) {
+        setError('خطا در اتصال به سرورهای احراز هویت گوگل. لطفاً وضعیت اینترنت یا فیلترشکن خود را بررسی کنید.');
       } else {
-        setError('خطا در احراز هویت گوگل. لطفاً مسدودکننده پاپ‌آپ را بررسی کرده و دوباره تلاش کنید.');
+        setError(
+          `خطا در احراز هویت گوگل${code ? ` (${code})` : ''}. لطفاً تنظیمات دامنه مجاز Firebase و مسدودکننده پاپ‌آپ را بررسی کنید.`
+        );
       }
     } finally {
       setLoading(false);

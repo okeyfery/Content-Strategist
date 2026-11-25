@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ArrowLeft, Radar, ShieldCheck, Layers, TrendingUp, Sparkles } from 'lucide-react';
+import { ArrowLeft, Check, Copy, ExternalLink, Radar, ShieldCheck, Layers, TrendingUp, Sparkles } from 'lucide-react';
 import { signInWithGoogle } from '../firebase';
+import firebaseConfig from '../../firebase-applet-config.json';
 import studioBackdrop from '../assets/images/auth_studio_backdrop_1795548676361.jpg';
 
 const STUDIO_BACKDROP = studioBackdrop;
@@ -8,11 +9,25 @@ const STUDIO_BACKDROP = studioBackdrop;
 export function AuthGate() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unauthorizedHost, setUnauthorizedHost] = useState<string | null>(null);
+  const [copiedHost, setCopiedHost] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
+
+  const handleCopyHost = async () => {
+    if (!unauthorizedHost || typeof navigator === 'undefined' || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(unauthorizedHost);
+      setCopiedHost(true);
+      setTimeout(() => setCopiedHost(false), 2000);
+    } catch {
+      // Ignore clipboard failures in restricted contexts
+    }
+  };
 
   const handleLogin = async () => {
     setLoading(true);
     setError(null);
+    setUnauthorizedHost(null);
     try {
       await signInWithGoogle();
     } catch (err) {
@@ -22,8 +37,9 @@ export function AuthGate() {
 
       if (combined.includes('unauthorized-domain')) {
         const host = typeof window !== 'undefined' ? window.location.hostname : '';
+        setUnauthorizedHost(host || null);
         setError(
-          `دامنه «${host}» در Firebase مجاز نشده است (auth/unauthorized-domain). در Firebase Console وارد Authentication → Settings → Authorized domains شوید و این دامنه را اضافه کنید.`
+          `دامنه «${host}» هنوز در لیست دامنه‌های مجاز Firebase ثبت نشده است (auth/unauthorized-domain).`
         );
       } else if (combined.includes('popup-closed-by-user')) {
         setError('پنجره ورود بسته شد. برای ادامه مجدداً روی ورود با گوگل کلیک کنید.');
@@ -107,9 +123,31 @@ export function AuthGate() {
             </button>
 
             {error && (
-              <p className="text-xs text-red-400 leading-relaxed bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-                {error}
-              </p>
+              <div className="text-xs text-red-300 leading-relaxed bg-red-500/10 border border-red-500/20 rounded-lg p-3.5 space-y-2.5">
+                <p>{error}</p>
+                {unauthorizedHost && (
+                  <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-red-500/15">
+                    <button
+                      type="button"
+                      onClick={() => void handleCopyHost()}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono bg-[#0B0F17] hover:bg-[#111827] text-white border border-red-500/25 rounded-md cursor-pointer"
+                      dir="ltr"
+                    >
+                      {copiedHost ? <Check className="w-3 h-3 text-[#10B981]" /> : <Copy className="w-3 h-3" />}
+                      <span>{unauthorizedHost}</span>
+                    </button>
+                    <a
+                      href={`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/settings`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-[#3B82F6]/20 hover:bg-[#3B82F6]/30 text-[#93C5FD] border border-[#3B82F6]/30 rounded-md transition-colors"
+                    >
+                      <span>باز کردن Authorized domains در Firebase</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
+              </div>
             )}
 
             <div className="flex items-center gap-2 text-xs text-[#64748B]">

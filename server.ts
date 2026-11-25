@@ -722,7 +722,7 @@ function matchesFollowerRange(followers: number, range: ResolvedAccountRange): b
   return true;
 }
 
-async function createServer() {
+export function createApiApp() {
   const app = express();
   app.use(express.json({ limit: '2mb' }));
 
@@ -1736,6 +1736,16 @@ Deliver concrete, production-ready output in ${targetLang}:
     }
   });
 
+  // Catch-all for unknown /api routes so clients always receive JSON
+  app.use('/api', (_req: Request, res: Response) => {
+    res.status(404).json({ error: 'مسیر API درخواستی یافت نشد.' });
+  });
+
+  return app;
+}
+
+async function startStandaloneServer() {
+  const app = createApiApp();
   const isProd = process.env.NODE_ENV === 'production';
   if (!isProd) {
     const { createServer: createViteServer } = await import('vite');
@@ -1758,7 +1768,9 @@ Deliver concrete, production-ready output in ${targetLang}:
   });
 }
 
-createServer().catch((err) => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});
+if (!process.env.VERCEL) {
+  startStandaloneServer().catch((err) => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  });
+}
